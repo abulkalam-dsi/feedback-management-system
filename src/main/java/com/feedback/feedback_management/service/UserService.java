@@ -3,10 +3,12 @@ package com.feedback.feedback_management.service;
 import com.feedback.feedback_management.entity.User;
 import com.feedback.feedback_management.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 
+@Service
 public class UserService {
 
     private final UserRepository userRepository;

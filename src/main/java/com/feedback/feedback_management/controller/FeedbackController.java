@@ -59,7 +59,6 @@ public class FeedbackController {
     //Reject feedback
     @PutMapping("/{id}/reject")
     public ResponseEntity<?> rejectFeedback(@PathVariable long id, @RequestParam long approverId) {
-        System.out.println("approverId: " + approverId);
         try {
             FeedbackResponseDTO feedbackResponseDTO = feedbackService.rejectFeedback(id, approverId);
             return ResponseEntity.ok(feedbackResponseDTO);

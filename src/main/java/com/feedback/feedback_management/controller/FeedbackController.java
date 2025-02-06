@@ -6,13 +6,16 @@ import com.feedback.feedback_management.dto.FeedbackResponseDTO;
 import com.feedback.feedback_management.entity.Feedback;
 import com.feedback.feedback_management.entity.FeedbackHistory;
 import com.feedback.feedback_management.entity.User;
+import com.feedback.feedback_management.enums.*;
 import com.feedback.feedback_management.service.FeedbackService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @RestController
@@ -58,8 +61,20 @@ public class FeedbackController {
     }
 
     @GetMapping("/{id}/history")
-    public ResponseEntity<List<FeedbackHistoryResponseDTO>> getFeedbackHistory(@PathVariable Long id) {
-        return ResponseEntity.ok(feedbackService.getFeedbackHistory(id));
+    public ResponseEntity<List<FeedbackHistoryResponseDTO>> getFeedbackHistory(@PathVariable Long id,
+                                                                               @RequestParam(required = false) String changedBy,
+                                                                               @RequestParam(required = false) FeedbackStatus previousStatus,
+                                                                               @RequestParam(required = false) FeedbackStatus newStatus,
+                                                                               @RequestParam(required = false) FeedbackPriority previousPriority,
+                                                                               @RequestParam(required = false) FeedbackPriority newPriority,
+                                                                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
+                                                                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
+                                                                               @RequestParam(defaultValue = "changeTimestamp") String sortBy,
+                                                                               @RequestParam(defaultValue = "desc") String sortOrder) {
+        List<FeedbackHistoryResponseDTO> history = feedbackService.getFeedbackHistory(
+                id, changedBy, previousStatus, newStatus, previousPriority, newPriority, fromDate, toDate, sortBy, sortOrder);
+
+        return ResponseEntity.ok(history);
     }
 
     //Approve feedback

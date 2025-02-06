@@ -6,11 +6,15 @@ import com.feedback.feedback_management.dto.FeedbackResponseDTO;
 import com.feedback.feedback_management.entity.Feedback;
 import com.feedback.feedback_management.entity.FeedbackHistory;
 import com.feedback.feedback_management.entity.User;
+import com.feedback.feedback_management.enums.FeedbackPriority;
 import com.feedback.feedback_management.enums.FeedbackStatus;
 import com.feedback.feedback_management.repository.FeedbackHistoryRepository;
 import com.feedback.feedback_management.repository.FeedbackRepository;
 import com.feedback.feedback_management.repository.UserRepository;
+import com.feedback.feedback_management.specification.FeedbackHistorySpecification;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -98,8 +102,17 @@ public class FeedbackService {
         }).orElseThrow(() -> new RuntimeException("Feedback not found"));
     }
 
-    public List<FeedbackHistoryResponseDTO> getFeedbackHistory(Long id) {
-        List<FeedbackHistory> historyList = feedbackHistoryRepository.findByFeedbackId(id);
+    public List<FeedbackHistoryResponseDTO> getFeedbackHistory(Long feedbackId, String changedBy,
+                                                               FeedbackStatus previousStatus, FeedbackStatus newStatus,
+                                                               FeedbackPriority previousPriority, FeedbackPriority newPriority,
+                                                               LocalDateTime fromDate, LocalDateTime toDate,
+                                                               String sortBy, String sortOrder) {
+        //Apply filtering
+        Specification<FeedbackHistory> specification = new FeedbackHistorySpecification(feedbackId, changedBy, previousStatus, newStatus, previousPriority, newPriority,fromDate, toDate
+                );
+        //Apply sorting
+        Sort sort = Sort.by(Sort.Direction.fromString(sortOrder), sortBy);
+        List<FeedbackHistory> historyList = feedbackHistoryRepository.findAll(specification, sort);
         return historyList.stream()
                 .map(FeedbackHistoryResponseDTO::new)
                 .collect(Collectors.toList());

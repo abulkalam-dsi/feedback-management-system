@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -75,5 +76,47 @@ public class FeedbackService {
             feedback.setPriority(updatedFeedback.getPriority());
             return feedbackRepository.save(feedback);
         }).orElseThrow(() -> new RuntimeException("Feedback not found"));
+    }
+
+    //Approve Feedback
+    public FeedbackResponseDTO approveFeedback(long feedbackId, long approveId) {
+        Feedback feedback = feedbackRepository.findById(feedbackId)
+                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+
+        if (feedback.getStatus() != FeedbackStatus.PENDING){
+            throw new RuntimeException("Feedback is already processed");
+        }
+
+        User approver = userRepository.findById(approveId)
+                .orElseThrow(() -> new RuntimeException("Approver user not found"));
+
+        feedback.setStatus(FeedbackStatus.APPROVED);
+        feedback.setApprover(approver);
+        feedback.setApprovalDate(LocalDateTime.now());
+
+        Feedback savedFeedback = feedbackRepository.save(feedback);
+
+        return new FeedbackResponseDTO(savedFeedback);
+    }
+
+    //Reject Feedback
+    public FeedbackResponseDTO rejectFeedback(long feedbackId, long approverId) {
+        Feedback feedback = feedbackRepository.findById(feedbackId)
+                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+
+        if (feedback.getStatus() != FeedbackStatus.PENDING) {
+            throw new RuntimeException("Feedback is already processed");
+        }
+
+        User approver = userRepository.findById(approverId)
+                .orElseThrow(() -> new RuntimeException("Approver user not found"));
+
+        feedback.setStatus(FeedbackStatus.REJECTED);
+        feedback.setApprover(approver);
+        feedback.setApprovalDate(LocalDateTime.now());
+
+        Feedback savedFeedback = feedbackRepository.save(feedback);
+
+        return new FeedbackResponseDTO(savedFeedback);
     }
 }

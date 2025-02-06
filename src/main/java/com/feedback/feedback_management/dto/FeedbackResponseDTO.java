@@ -20,6 +20,8 @@ public class FeedbackResponseDTO {
     private FeedbackStatus status;
     private String createdBy;
     private String assignedTo;
+    private String approver;
+    private LocalDateTime approvalDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -32,6 +34,8 @@ public class FeedbackResponseDTO {
         this.status = feedback.getStatus();
         this.createdBy = feedback.getCreatedBy().getName();
         this.assignedTo = (feedback.getAssignedTo() != null) ? feedback.getAssignedTo().getName() : "Unassigned";
+        this.approver = feedback.getApprover() != null ? feedback.getApprover().getName() : "Not Approved Yet";
+        this.approvalDate = feedback.getApprovalDate();
         this.createdAt = feedback.getCreatedAt();
         this.updatedAt = feedback.getUpdatedAt();
     }

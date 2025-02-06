@@ -53,4 +53,11 @@ public class Feedback {
 
     @Column(nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
+
+    @ManyToOne
+    @JoinColumn(name = "approver_id")
+    private User Approver;
+
+    @Column(name = "approval_date")
+    private LocalDateTime approvalDate;
 }

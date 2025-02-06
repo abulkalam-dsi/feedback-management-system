@@ -55,4 +55,16 @@ public class FeedbackController {
             return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
+
+    //Reject feedback
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<?> rejectFeedback(@PathVariable long id, @RequestParam long approverId) {
+        System.out.println("approverId: " + approverId);
+        try {
+            FeedbackResponseDTO feedbackResponseDTO = feedbackService.rejectFeedback(id, approverId);
+            return ResponseEntity.ok(feedbackResponseDTO);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
 }

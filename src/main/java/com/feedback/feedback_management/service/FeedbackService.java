@@ -98,4 +98,25 @@ public class FeedbackService {
 
         return new FeedbackResponseDTO(savedFeedback);
     }
+
+    //Reject Feedback
+    public FeedbackResponseDTO rejectFeedback(long feedbackId, long approverId) {
+        Feedback feedback = feedbackRepository.findById(feedbackId)
+                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+
+        if (feedback.getStatus() != FeedbackStatus.PENDING) {
+            throw new RuntimeException("Feedback is already processed");
+        }
+
+        User approver = userRepository.findById(approverId)
+                .orElseThrow(() -> new RuntimeException("Approver user not found"));
+
+        feedback.setStatus(FeedbackStatus.REJECTED);
+        feedback.setApprover(approver);
+        feedback.setApprovalDate(LocalDateTime.now());
+
+        Feedback savedFeedback = feedbackRepository.save(feedback);
+
+        return new FeedbackResponseDTO(savedFeedback);
+    }
 }

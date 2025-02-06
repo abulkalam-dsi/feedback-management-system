@@ -1,5 +1,7 @@
 package com.feedback.feedback_management.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.feedback.feedback_management.enums.FeedbackCategory;
 import com.feedback.feedback_management.enums.FeedbackPriority;
 import com.feedback.feedback_management.enums.FeedbackStatus;

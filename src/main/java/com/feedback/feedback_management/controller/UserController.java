@@ -1,7 +1,11 @@
 package com.feedback.feedback_management.controller;
 
+import com.feedback.feedback_management.dto.FeedbackResponseDTO;
+import com.feedback.feedback_management.dto.UserRequestDTO;
+import com.feedback.feedback_management.dto.UserResponseDTO;
 import com.feedback.feedback_management.entity.User;
 import com.feedback.feedback_management.service.UserService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,8 +22,13 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<User> registerUser(@RequestBody User user) {
-        return ResponseEntity.ok(userService.registerUser(user));
+    public ResponseEntity<UserResponseDTO> registerUser(@RequestBody UserRequestDTO userRequestDTO) {
+        try {
+            UserResponseDTO userResponseDTO = userService.registerUser(userRequestDTO);
+            return ResponseEntity.ok().body(userResponseDTO);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
     }
 
     @GetMapping
@@ -28,7 +37,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable long id) {
+    public ResponseEntity<UserResponseDTO> getUserById(@PathVariable long id) {
         return  userService.getUserById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

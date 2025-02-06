@@ -1,5 +1,7 @@
 package com.feedback.feedback_management.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.feedback.feedback_management.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -26,6 +28,15 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role;
+
+    @JsonIgnore
     @OneToMany(mappedBy = "createdBy", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Feedback> feedbacks;
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "assignedTo")
+    private List<Feedback> assignedFeedbacks;
 }

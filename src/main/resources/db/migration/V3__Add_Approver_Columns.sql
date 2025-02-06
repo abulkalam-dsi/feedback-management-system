@@ -1,0 +1,4 @@
+ALTER TABLE feedback
+ADD COLUMN approver_id BIGINT NULL,
+ADD COLUMN approval_date TIMESTAMP NULL,
+ADD FOREIGN KEY (approver_id) REFERENCES users(id) ON DELETE SET NULL;

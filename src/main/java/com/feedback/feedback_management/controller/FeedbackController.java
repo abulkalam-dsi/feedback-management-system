@@ -1,8 +1,10 @@
 package com.feedback.feedback_management.controller;
 
+import com.feedback.feedback_management.dto.FeedbackHistoryResponseDTO;
 import com.feedback.feedback_management.dto.FeedbackRequestDTO;
 import com.feedback.feedback_management.dto.FeedbackResponseDTO;
 import com.feedback.feedback_management.entity.Feedback;
+import com.feedback.feedback_management.entity.FeedbackHistory;
 import com.feedback.feedback_management.entity.User;
 import com.feedback.feedback_management.service.FeedbackService;
 import org.springframework.http.HttpStatus;
@@ -43,6 +45,21 @@ public class FeedbackController {
         return feedbackService.getFeedbackById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}/update")
+    public ResponseEntity<?> updateFeedback(@PathVariable long id, @RequestBody Feedback updatedFeedback, @RequestParam Long changedById) {
+        try {
+            Feedback savedFeedback = feedbackService.updateFeedback(id, updatedFeedback, changedById);
+            return ResponseEntity.ok(savedFeedback);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/history")
+    public ResponseEntity<List<FeedbackHistoryResponseDTO>> getFeedbackHistory(@PathVariable Long id) {
+        return ResponseEntity.ok(feedbackService.getFeedbackHistory(id));
     }
 
     //Approve feedback

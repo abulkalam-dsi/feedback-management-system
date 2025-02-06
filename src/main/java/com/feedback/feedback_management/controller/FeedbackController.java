@@ -44,4 +44,15 @@ public class FeedbackController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    //Approve feedback
+    @PutMapping("/{id}/approve")
+    public ResponseEntity<?> approveFeedabck(@PathVariable long id, @RequestParam long approverId) {
+        try {
+            FeedbackResponseDTO feedbackResponseDTO = feedbackService.approveFeedback(id, approverId);
+            return ResponseEntity.ok(feedbackResponseDTO);
+        } catch (RuntimeException e) {
+            return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
 }

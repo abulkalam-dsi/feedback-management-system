@@ -159,4 +159,11 @@ public class FeedbackService {
 
         return new FeedbackResponseDTO(savedFeedback);
     }
+
+    public void deleteFeedback(long feedbackId) {
+        Feedback feedback = feedbackRepository.findById(feedbackId)
+                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+
+        feedbackRepository.deleteById(feedbackId);
+    }
 }

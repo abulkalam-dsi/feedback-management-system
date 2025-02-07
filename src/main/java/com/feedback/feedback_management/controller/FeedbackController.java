@@ -12,6 +12,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,6 +29,7 @@ public class FeedbackController {
         this.feedbackService = feedbackService;
     }
 
+    @PreAuthorize("hasAnyRole('USER', 'APPROVER', 'ADMIN')")
     @PostMapping("/register")
     public ResponseEntity<FeedbackResponseDTO> submitFeedback(@RequestBody FeedbackRequestDTO feedbackRequestDTO) {
         try {
@@ -77,6 +79,7 @@ public class FeedbackController {
         return ResponseEntity.ok(history);
     }
 
+    @PreAuthorize("hasRole('APPROVER') or hasRole('ADMIN')")
     //Approve feedback
     @PutMapping("/{id}/approve")
     public ResponseEntity<?> approveFeedabck(@PathVariable long id, @RequestParam long approverId) {
@@ -88,6 +91,7 @@ public class FeedbackController {
         }
     }
 
+    @PreAuthorize("hasRole('APPROVER') or hasRole('ADMIN')")
     //Reject feedback
     @PutMapping("/{id}/reject")
     public ResponseEntity<?> rejectFeedback(@PathVariable long id, @RequestParam long approverId) {
@@ -97,5 +101,12 @@ public class FeedbackController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteFeedback(@PathVariable long id) {
+        feedbackService.deleteFeedback(id);
+        return ResponseEntity.ok("Feedback deleted successfully");
     }
 }

@@ -55,4 +55,8 @@ public class AuthService {
 
         return new AuthResponseDTO(token);
     }
+
+    public void logout(String token) {
+        jwtUtil.invalidateToken(token.replace("Bearer", ""));
+    }
 }

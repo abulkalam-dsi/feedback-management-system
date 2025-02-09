@@ -33,11 +33,18 @@ public class AuthService {
             throw new RuntimeException("Email is already in use.");
         }
 
+        UserRole userRole;
+        try {
+            userRole = UserRole.valueOf(requestDTO.getRole().toString().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid role. Valid roles are USER, APPROVER, ADMIN.");
+        }
+
         User user = new User();
         user.setEmail(requestDTO.getEmail());
         user.setName(requestDTO.getName());
         user.setPassword(passwordEncoder.encode(requestDTO.getPassword()));
-        user.setRole(UserRole.USER);
+        user.setRole(userRole);
 
         userRepository.save(user);
 

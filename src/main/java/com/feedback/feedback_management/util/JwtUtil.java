@@ -22,13 +22,17 @@ public class JwtUtil {
 
 
     public String generateToken(User user) {
-        return Jwts.builder()
+        String token = Jwts.builder()
                 .setSubject(user.getEmail())
+                .claim("id", user.getId())
                 .claim("role", user.getRole().name())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 10)) // 10 hours validity
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
+
+        System.out.println("Generated JWT: " + token); // Print JWT for debugging
+        return token;
     }
 
     public boolean isTokenBlacklisted(String token) {

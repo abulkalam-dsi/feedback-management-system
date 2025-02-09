@@ -3,6 +3,7 @@ package com.feedback.feedback_management.service;
 import com.feedback.feedback_management.dto.AuthRequestDTO;
 import com.feedback.feedback_management.dto.AuthResponseDTO;
 import com.feedback.feedback_management.dto.RegisterRequstDTO;
+import com.feedback.feedback_management.dto.UserResponseDTO;
 import com.feedback.feedback_management.entity.User;
 import com.feedback.feedback_management.enums.UserRole;
 import com.feedback.feedback_management.repository.UserRepository;

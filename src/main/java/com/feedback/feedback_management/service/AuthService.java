@@ -52,7 +52,7 @@ public class AuthService {
         User user = userRepository.findByEmail(requestDTO.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        String token = jwtUtil.generateToken(user.getEmail());
+        String token = jwtUtil.generateToken(user);
 
         return new AuthResponseDTO(token);
     }

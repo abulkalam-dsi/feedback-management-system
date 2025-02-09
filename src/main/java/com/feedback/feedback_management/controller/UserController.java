@@ -7,6 +7,8 @@ import com.feedback.feedback_management.entity.User;
 import com.feedback.feedback_management.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -41,5 +43,11 @@ public class UserController {
         return  userService.getUserById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserResponseDTO> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
+        UserResponseDTO responseDTO = userService.getCurrentUser(userDetails.getUsername());
+        return ResponseEntity.ok(responseDTO);
     }
 }

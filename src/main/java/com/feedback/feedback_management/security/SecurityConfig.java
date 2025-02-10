@@ -45,6 +45,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/approver/**").hasRole("APPROVER")
                         .requestMatchers("/api/feedback/**").authenticated()
                         .requestMatchers("/api/users/**").authenticated()
+                        .requestMatchers("/api/dashboard/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

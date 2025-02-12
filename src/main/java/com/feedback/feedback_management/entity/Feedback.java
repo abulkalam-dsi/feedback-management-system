@@ -9,6 +9,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -38,7 +40,7 @@ public class Feedback {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private FeedbackStatus status;
+    private FeedbackStatus status = FeedbackStatus.PENDING;
 
     @ManyToOne
     @JoinColumn(name = "created_by", nullable = false)
@@ -54,9 +56,19 @@ public class Feedback {
     @Column(nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
 
-    @ManyToOne
-    @JoinColumn(name = "approver_id")
-    private User Approver;
+    @ManyToMany
+    @JoinTable(
+            name = "feedback_approvers",
+            joinColumns = @JoinColumn(name = "feedback_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> approvers = new HashSet<>(); // Multiple approvers
+
+    //Update timestamp when modifying status
+    @PreUpdate
+    public void preUpdate() {
+        this.updatedAt = LocalDateTime.now();
+    }
 
     @Column(name = "approval_date")
     private LocalDateTime approvalDate;

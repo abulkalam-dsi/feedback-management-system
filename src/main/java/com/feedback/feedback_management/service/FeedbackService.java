@@ -20,8 +20,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -123,16 +125,24 @@ public class FeedbackService {
         Feedback feedback = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new RuntimeException("Feedback not found"));
 
-        if (feedback.getStatus() != FeedbackStatus.PENDING){
-            throw new RuntimeException("Feedback is already processed");
-        }
-
         User approver = userRepository.findById(approveId)
                 .orElseThrow(() -> new RuntimeException("Approver user not found"));
 
-        feedback.setStatus(FeedbackStatus.APPROVED);
-        feedback.setApprover(approver);
+        if (feedback.getStatus() != FeedbackStatus.PENDING) {
+            throw new RuntimeException("Feedback is already processed");
+        }
+
+        if (feedback.getApprovers().contains(approver)) {
+            throw new RuntimeException("You have already approved this feedback.");
+        }
+
+        feedback.getApprovers().add(approver);
         feedback.setApprovalDate(LocalDateTime.now());
+
+        //If all required approvers approve, mark as APPROVED
+        if (feedback.getApprovers().size() >= 1) {
+            feedback.setStatus(FeedbackStatus.APPROVED);
+        }
 
         Feedback savedFeedback = feedbackRepository.save(feedback);
 
@@ -151,8 +161,12 @@ public class FeedbackService {
         User approver = userRepository.findById(approverId)
                 .orElseThrow(() -> new RuntimeException("Approver user not found"));
 
+        if (feedback.getApprovers().contains(approver)) {
+            throw new RuntimeException("You have already reviewed this feedback.");
+        }
+
+        feedback.getApprovers().add(approver);
         feedback.setStatus(FeedbackStatus.REJECTED);
-        feedback.setApprover(approver);
         feedback.setApprovalDate(LocalDateTime.now());
 
         Feedback savedFeedback = feedbackRepository.save(feedback);
@@ -165,5 +179,15 @@ public class FeedbackService {
                 .orElseThrow(() -> new RuntimeException("Feedback not found"));
 
         feedbackRepository.deleteById(feedbackId);
+    }
+
+    //Assign Approvers
+    public void assignApprovers(long feedbackId, List<Long> approverIds) {
+        Feedback feedback = feedbackRepository.findById(feedbackId)
+                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+
+        Set<User> approvers = new HashSet<>(userRepository.findAllById(approverIds));
+        feedback.setApprovers(approvers);
+        feedbackRepository.save(feedback);
     }
 }

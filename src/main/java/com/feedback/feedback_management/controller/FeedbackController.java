@@ -109,4 +109,10 @@ public class FeedbackController {
         feedbackService.deleteFeedback(id);
         return ResponseEntity.ok("Feedback deleted successfully");
     }
+
+    @PutMapping("/{id}/assign-approvers")
+    public ResponseEntity<?> assignApprovers(@PathVariable Long id, @RequestBody List<Long> approverIds) {
+        feedbackService.assignApprovers(id, approverIds);
+        return ResponseEntity.ok("Approvers assigned successfully");
+    }
 }

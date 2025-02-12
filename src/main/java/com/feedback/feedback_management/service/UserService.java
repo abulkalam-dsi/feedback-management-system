@@ -3,6 +3,7 @@ package com.feedback.feedback_management.service;
 import com.feedback.feedback_management.dto.UserRequestDTO;
 import com.feedback.feedback_management.dto.UserResponseDTO;
 import com.feedback.feedback_management.entity.User;
+import com.feedback.feedback_management.enums.UserRole;
 import com.feedback.feedback_management.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -53,5 +54,12 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return new UserResponseDTO(user);
+    }
+
+    public void updateUserRole(Long id, String newRole) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setRole(UserRole.valueOf(newRole.toUpperCase()));
+        userRepository.save(user);
     }
 }

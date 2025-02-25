@@ -9,7 +9,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -64,6 +66,11 @@ public class Feedback {
     )
     private Set<User> approvers = new HashSet<>(); // Multiple approvers
 
+    @OneToMany(mappedBy = "feedback", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("changeTimestamp DESC")
+    @JsonIgnore
+    private List<FeedbackHistory> feedbackHistory = new ArrayList<>(); // Link to history
+
     //Update timestamp when modifying status
     @PreUpdate
     public void preUpdate() {
@@ -72,4 +79,8 @@ public class Feedback {
 
     @Column(name = "approval_date")
     private LocalDateTime approvalDate;
+
+    public List<FeedbackHistory> getFeedbackHistory() {
+        return feedbackHistory;
+    }
 }

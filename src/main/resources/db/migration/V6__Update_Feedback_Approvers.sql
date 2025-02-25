@@ -1,4 +1,16 @@
-CREATE TABLE feedback_approvers (
+-- Check if the column exists before dropping
+SET @exist = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+              WHERE TABLE_NAME = 'feedback' 
+              AND COLUMN_NAME = 'approver_id' 
+              AND TABLE_SCHEMA = DATABASE());
+
+SET @query = IF(@exist > 0, 'ALTER TABLE feedback DROP COLUMN approver_id', 'SELECT 1');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Create the many-to-many relationship table for approvers
+CREATE TABLE IF NOT EXISTS feedback_approvers (
     feedback_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
     PRIMARY KEY (feedback_id, user_id),
@@ -6,8 +18,13 @@ CREATE TABLE feedback_approvers (
     CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 );
 
--- ✅ 2. Remove the old approver_id column (if exists)
-ALTER TABLE feedback DROP COLUMN IF EXISTS approver_id;
+-- Add `approval_date` column only if it doesn't exist
+SET @exist = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+              WHERE TABLE_NAME = 'feedback' 
+              AND COLUMN_NAME = 'approval_date' 
+              AND TABLE_SCHEMA = DATABASE());
 
--- ✅ 3. Add approval_date column if not exists
-ALTER TABLE feedback ADD COLUMN IF NOT EXISTS approval_date TIMESTAMP NULL;
+SET @query = IF(@exist = 0, 'ALTER TABLE feedback ADD COLUMN approval_date TIMESTAMP NULL', 'SELECT 1');
+PREPARE stmt FROM @query;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

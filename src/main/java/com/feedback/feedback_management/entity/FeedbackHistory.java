@@ -1,5 +1,6 @@
 package com.feedback.feedback_management.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.feedback.feedback_management.enums.*;
 import jakarta.persistence.*;
 import lombok.*;
@@ -17,8 +18,9 @@ public class FeedbackHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "feedback_id", nullable = false)
+    @JsonIgnore
     private Feedback feedback;
 
     @ManyToOne
@@ -36,6 +38,9 @@ public class FeedbackHistory {
 
     @Enumerated(EnumType.STRING)
     private FeedbackPriority newPriority;
+
+    @Column(columnDefinition = "TEXT")  // Stores comments
+    private String comment;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime changeTimestamp = LocalDateTime.now();

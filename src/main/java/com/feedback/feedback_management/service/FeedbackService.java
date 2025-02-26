@@ -8,6 +8,7 @@ import com.feedback.feedback_management.entity.FeedbackHistory;
 import com.feedback.feedback_management.entity.User;
 import com.feedback.feedback_management.enums.FeedbackPriority;
 import com.feedback.feedback_management.enums.FeedbackStatus;
+import com.feedback.feedback_management.repository.CommentRepository;
 import com.feedback.feedback_management.repository.FeedbackHistoryRepository;
 import com.feedback.feedback_management.repository.FeedbackRepository;
 import com.feedback.feedback_management.repository.UserRepository;
@@ -19,15 +20,14 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
+import com.feedback.feedback_management.entity.Comment;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,6 +36,7 @@ public class FeedbackService {
     private final FeedbackRepository feedbackRepository;
     private final UserRepository userRepository;
     private final FeedbackHistoryRepository feedbackHistoryRepository;
+    private final CommentRepository commentRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -44,12 +45,13 @@ public class FeedbackService {
                            UserRepository userRepository,
                            FeedbackHistoryRepository feedbackHistoryRepository,
                            ApplicationEventPublisher eventPublisher,
-                           SimpMessagingTemplate messagingTemplate) {
+                           SimpMessagingTemplate messagingTemplate, CommentRepository commentRepository) {
         this.feedbackRepository = feedbackRepository;
         this.userRepository = userRepository;
         this.feedbackHistoryRepository = feedbackHistoryRepository;
         this.eventPublisher = eventPublisher;
         this.messagingTemplate = messagingTemplate;
+        this.commentRepository = commentRepository;
     }
 
     public FeedbackResponseDTO submitFeedback(FeedbackRequestDTO feedbackRequestDTO) {
@@ -132,40 +134,6 @@ public class FeedbackService {
                 .collect(Collectors.toList());
     }
 
-    //Approve Feedback
-//    public FeedbackResponseDTO approveFeedback(long feedbackId, long approveId) {
-//        Feedback feedback = feedbackRepository.findById(feedbackId)
-//                .orElseThrow(() -> new RuntimeException("Feedback not found"));
-//
-//        User approver = userRepository.findById(approveId)
-//                .orElseThrow(() -> new RuntimeException("Approver user not found"));
-//
-//        if (feedback.getStatus() != FeedbackStatus.PENDING) {
-//            throw new RuntimeException("Feedback is already processed");
-//        }
-//
-//        if (!feedback.getApprovers().contains(approver)) {
-//            throw new RuntimeException("User is not an assigned approver for this feedback.");
-//        }
-//
-//        feedback.getApprovers().add(approver);
-//        feedback.setStatus(FeedbackStatus.APPROVED);
-//        feedback.setApprovalDate(LocalDateTime.now());
-//
-//        // Save feedback update
-//        Feedback savedFeedback = feedbackRepository.save(feedback);
-//
-//        // Log approval in history
-//        FeedbackHistory history = new FeedbackHistory();
-//        history.setFeedback(feedback);
-//        history.setChangedBy(approver);
-//        history.setPreviousStatus(FeedbackStatus.PENDING);
-//        history.setNewStatus(FeedbackStatus.APPROVED);
-//        feedbackHistoryRepository.save(history);
-//
-//        return new FeedbackResponseDTO(savedFeedback);
-//    }
-
     // Approve Feedback (Updated)
     public FeedbackResponseDTO approveFeedback(long feedbackId, long approverId) {
         Feedback feedback = feedbackRepository.findById(feedbackId)
@@ -200,43 +168,12 @@ public class FeedbackService {
         history.setChangedBy(approver);
         history.setPreviousStatus(FeedbackStatus.AWAITING_APPROVAL);
         history.setNewStatus(savedFeedback.getStatus()); // Could be `APPROVED` or still `AWAITING_APPROVAL`
+        history.setChangeTimestamp(LocalDateTime.now());
+        history.setComment("Approved by " + approver.getName());
         feedbackHistoryRepository.save(history);
 
         return new FeedbackResponseDTO(savedFeedback);
     }
-
-    //Reject Feedback
-//    public FeedbackResponseDTO rejectFeedback(long feedbackId, long approverId) {
-//        Feedback feedback = feedbackRepository.findById(feedbackId)
-//                .orElseThrow(() -> new RuntimeException("Feedback not found"));
-//
-//        if (feedback.getStatus() != FeedbackStatus.PENDING) {
-//            throw new RuntimeException("Feedback is already processed");
-//        }
-//
-//        User approver = userRepository.findById(approverId)
-//                .orElseThrow(() -> new RuntimeException("Approver user not found"));
-//
-//        if (feedback.getApprovers().contains(approver)) {
-//            throw new RuntimeException("You have already reviewed this feedback.");
-//        }
-//
-//        feedback.getApprovers().add(approver);
-//        feedback.setStatus(FeedbackStatus.REJECTED);
-//        feedback.setApprovalDate(LocalDateTime.now());
-//        //update feedback
-//        Feedback savedFeedback = feedbackRepository.save(feedback);
-//
-//        // Log rejection in history
-//        FeedbackHistory history = new FeedbackHistory();
-//        history.setFeedback(feedback);
-//        history.setChangedBy(approver);
-//        history.setPreviousStatus(FeedbackStatus.PENDING);
-//        history.setNewStatus(FeedbackStatus.REJECTED);
-//        feedbackHistoryRepository.save(history);
-//
-//        return new FeedbackResponseDTO(savedFeedback);
-//    }
 
     // Reject Feedback (Updated)
     public FeedbackResponseDTO rejectFeedback(long feedbackId, long approverId) {
@@ -264,6 +201,8 @@ public class FeedbackService {
         history.setChangedBy(approver);
         history.setPreviousStatus(FeedbackStatus.AWAITING_APPROVAL);
         history.setNewStatus(FeedbackStatus.REJECTED);
+        history.setChangeTimestamp(LocalDateTime.now());
+        history.setComment("Rejected by " + approver.getName());
         feedbackHistoryRepository.save(history);
 
         return new FeedbackResponseDTO(savedFeedback);
@@ -277,6 +216,7 @@ public class FeedbackService {
     }
 
     // Assign Approvers
+    @Transactional
     public Feedback assignApprovers(long feedbackId, List<Long> approverIds) {
         Feedback feedback = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new RuntimeException("Feedback not found"));
@@ -287,14 +227,31 @@ public class FeedbackService {
 
         Set<User> approvers = new HashSet<>(userRepository.findAllById(approverIds));
         feedback.setApprovers(approvers);
-        feedback.setStatus(FeedbackStatus.AWAITING_APPROVAL); // ✅ Update status to Awaiting Approval
-        feedbackRepository.save(feedback);
+        feedback.setStatus(FeedbackStatus.AWAITING_APPROVAL); // ✅ Update status
 
-        return feedback;
+        // ✅ Get current logged-in admin
+        User adminUser = getCurrentUser();
+
+        // ✅ Save feedback update
+        Feedback updatedFeedback = feedbackRepository.save(feedback);
+
+        // ✅ Log this in history
+        FeedbackHistory history = new FeedbackHistory();
+        history.setFeedback(feedback);
+        history.setChangedBy(adminUser); // ✅ Set the logged-in admin
+        history.setPreviousStatus(FeedbackStatus.PENDING);
+        history.setNewStatus(FeedbackStatus.AWAITING_APPROVAL);
+        history.setChangeTimestamp(LocalDateTime.now());
+        history.setComment("Approvers Assigned: " +
+                approvers.stream().map(User::getName).collect(Collectors.joining(", "))); // ✅ Log assigned approvers
+
+        feedbackHistoryRepository.save(history);
+
+        return updatedFeedback;
     }
 
     @Transactional
-    public Feedback addComment(long feedbackId, long userId, String comment) {
+    public Comment addComment(long feedbackId, long userId, String comment) {
         Feedback feedback = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new RuntimeException("Feedback not found"));
 
@@ -305,22 +262,26 @@ public class FeedbackService {
             throw new RuntimeException("Comment cannot be empty");
         }
 
-        // Save comment in FeedbackHistory
-        FeedbackHistory history = new FeedbackHistory();
-        history.setFeedback(feedback);
-        history.setChangedBy(user);
-        history.setComment(comment);
-        history.setChangeTimestamp(LocalDateTime.now());
-
-        feedbackHistoryRepository.save(history);
-
         // ✅ Publish event AFTER transaction commits
 //        eventPublisher.publishEvent(new FeedbackUpdatedEvent(this, feedbackId));
 
-        return feedback;
+        Comment saveComment = new Comment(feedback, user, comment);
+        return commentRepository.save(saveComment);
     }
 
     public Optional<FeedbackResponseDTO> getFeedbackResponseById(long id) {
-        return feedbackRepository.findById(id).map(FeedbackResponseDTO::new); // ✅ Convert to DTO
+        return feedbackRepository.findById(id)
+                .map(feedback -> {
+                    List<Comment> commentList = commentRepository.findByFeedbackId(id);
+                    if (commentList == null) commentList = new ArrayList<>();
+                    return new FeedbackResponseDTO(feedback, commentList);
+                });
     }
+
+    private User getCurrentUser() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
 }

@@ -2,10 +2,8 @@ package com.feedback.feedback_management.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.feedback.feedback_management.dto.CommentRequestDTO;
-import com.feedback.feedback_management.dto.FeedbackHistoryResponseDTO;
-import com.feedback.feedback_management.dto.FeedbackRequestDTO;
-import com.feedback.feedback_management.dto.FeedbackResponseDTO;
+import com.feedback.feedback_management.dto.*;
+import com.feedback.feedback_management.entity.Comment;
 import com.feedback.feedback_management.entity.Feedback;
 import com.feedback.feedback_management.entity.FeedbackHistory;
 import com.feedback.feedback_management.entity.User;
@@ -118,6 +116,7 @@ public class FeedbackController {
         return ResponseEntity.ok("Feedback deleted successfully");
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}/assign-approvers")
     public ResponseEntity<?> assignApprovers(@PathVariable Long id, @RequestBody List<Long> approverIds) {
         Feedback feedback = feedbackService.assignApprovers(id, approverIds);
@@ -133,17 +132,15 @@ public class FeedbackController {
     }
 
     @PostMapping("/{id}/comments")
-    @PreAuthorize("permitAll()") // ✅ Temporarily allow all users
     public ResponseEntity<?> addComment(@PathVariable Long id, @RequestBody CommentRequestDTO commentRequest) {
         if (commentRequest.getUserId() == null || commentRequest.getText().trim().isEmpty()) {
             return ResponseEntity.badRequest().body("User ID and comment text are required.");
         }
 
-        Feedback feedback = feedbackService.addComment(id, commentRequest.getUserId(), commentRequest.getText());
+        Comment savedComment = feedbackService.addComment(id, commentRequest.getUserId(), commentRequest.getText());
 
-        FeedbackResponseDTO responseDTO = new FeedbackResponseDTO(feedback);
-
-        return ResponseEntity.ok(responseDTO);
+        // ✅ Return only the new comment instead of entire feedback response
+        return ResponseEntity.ok(new CommentDTO(savedComment.getUser().getName(), savedComment.getText(), savedComment.getCreatedAt()));
     }
 
     @GetMapping("/feedbackResponseById/{id}")

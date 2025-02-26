@@ -1,12 +1,14 @@
 package com.feedback.feedback_management.controller;
 
 import com.feedback.feedback_management.dto.FeedbackResponseDTO;
+import com.feedback.feedback_management.dto.RoleUpdateRequestDTO;
 import com.feedback.feedback_management.dto.UserRequestDTO;
 import com.feedback.feedback_management.dto.UserResponseDTO;
 import com.feedback.feedback_management.entity.User;
 import com.feedback.feedback_management.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -50,4 +52,12 @@ public class UserController {
         UserResponseDTO responseDTO = userService.getCurrentUser(userDetails.getUsername());
         return ResponseEntity.ok(responseDTO);
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{id}/role")
+    public ResponseEntity<String> updateUserRole(@PathVariable long id, @RequestBody RoleUpdateRequestDTO requestDTO) {
+        userService.updateUserRole(id, requestDTO.getRole());
+        return ResponseEntity.ok("User role updated successfully");
+    }
+
 }

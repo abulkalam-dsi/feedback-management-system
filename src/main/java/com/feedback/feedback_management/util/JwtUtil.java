@@ -75,4 +75,12 @@ public class JwtUtil {
                 .getBody();
         return claimsResolver.apply(claims);
     }
+
+    public Claims parseToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
 }

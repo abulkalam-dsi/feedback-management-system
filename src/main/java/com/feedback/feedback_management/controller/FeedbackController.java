@@ -9,6 +9,8 @@ import com.feedback.feedback_management.entity.FeedbackHistory;
 import com.feedback.feedback_management.entity.User;
 import com.feedback.feedback_management.enums.*;
 import com.feedback.feedback_management.service.FeedbackService;
+import com.feedback.feedback_management.util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -19,7 +21,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.List;
 import java.time.LocalDateTime;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/feedback")
@@ -27,10 +28,12 @@ public class FeedbackController {
 
     private final FeedbackService feedbackService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final JwtUtil jwtUtil;
 
-    public FeedbackController(FeedbackService feedbackService, SimpMessagingTemplate messagingTemplate) {
+    public FeedbackController(FeedbackService feedbackService, SimpMessagingTemplate messagingTemplate, JwtUtil jwtUtil) {
         this.feedbackService = feedbackService;
         this.messagingTemplate = messagingTemplate;
+        this.jwtUtil = jwtUtil;
     }
 
     @PreAuthorize("hasAnyRole('USER', 'APPROVER', 'ADMIN')")
@@ -45,8 +48,17 @@ public class FeedbackController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Feedback>> getAllFeedback() {
-        return  ResponseEntity.ok(feedbackService.getAllFeedback());
+    public ResponseEntity<List<FeedbackResponseDTO>> getAllFeedbacks(@RequestHeader("Authorization") String token) {
+        try {
+            Claims claims = jwtUtil.parseToken(token.replace("Bearer ", "")); // ✅ Extract user info from JWT
+            Long userId = Long.parseLong(claims.get("id").toString());
+            String userRole = claims.get("role").toString();
+
+            List<FeedbackResponseDTO> feedbacks = feedbackService.getAllFeedbacks(userId, userRole);
+            return ResponseEntity.ok(feedbacks);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+        }
     }
 
     @GetMapping("/{id}")
@@ -139,8 +151,12 @@ public class FeedbackController {
 
         Comment savedComment = feedbackService.addComment(id, commentRequest.getUserId(), commentRequest.getText());
 
+        System.out.println("Saved Comment: " + savedComment.getText());
+        System.out.println("User: " + (savedComment.getUser() != null ? savedComment.getUser().getName() : "NULL"));
+        System.out.println("CreatedAt: " + savedComment.getCreatedAt());
+
         // ✅ Return only the new comment instead of entire feedback response
-        return ResponseEntity.ok(new CommentDTO(savedComment.getUser().getName(), savedComment.getText(), savedComment.getCreatedAt()));
+        return ResponseEntity.ok(new CommentDTO(savedComment.getUser(), savedComment.getText(), savedComment.getCreatedAt()));
     }
 
     @GetMapping("/feedbackResponseById/{id}")

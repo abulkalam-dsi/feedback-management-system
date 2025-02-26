@@ -35,6 +35,7 @@ public class Comment {
         this.feedback = feedback;
         this.user = user;
         this.text = text;
+        this.createdAt = LocalDateTime.now();
     }
 }
 

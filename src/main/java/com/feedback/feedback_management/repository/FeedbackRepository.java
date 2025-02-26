@@ -34,4 +34,6 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
 
     @EntityGraph(attributePaths = {"feedbackHistory", "feedbackHistory.changedBy"}) // ✅ Load history eagerly
     Optional<Feedback> findById(Long id);
+
+    List<Feedback> findByCreatedBy_IdOrApprovers_Id(Long createdById, Long approverId);
 }

@@ -25,7 +25,8 @@ public class FeedbackResponseDTO {
     private FeedbackStatus status;
     private String createdBy;
     private String assignedTo;
-    private List<String> approvers;
+    private List<ApproverDTO> approvers;
+    private List<ApproverDTO> approvedApprovers;
     private List<Map<String, Object>> comments;
     private LocalDateTime approvalDate;
     private LocalDateTime createdAt;
@@ -40,9 +41,11 @@ public class FeedbackResponseDTO {
         this.status = feedback.getStatus();
         this.createdBy = feedback.getCreatedBy().getName();
         this.assignedTo = (feedback.getAssignedTo() != null) ? feedback.getAssignedTo().getName() : "Unassigned";
-        this.approvers = feedback.getApprovers()
-                .stream()
-                .map(User::getName)
+        this.approvers = feedback.getApprovers().stream()
+                .map(user -> new ApproverDTO(user.getId(), user.getName()))
+                .collect(Collectors.toList());
+        this.approvedApprovers = feedback.getApprovedApprovers().stream() // ✅ Fetch approved approvers
+                .map(user -> new ApproverDTO(user.getId(), user.getName()))
                 .collect(Collectors.toList());
         this.comments = feedback.getFeedbackHistory().stream()
                 .filter(h -> h.getComment() != null)

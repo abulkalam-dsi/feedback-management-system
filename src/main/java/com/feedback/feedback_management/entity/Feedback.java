@@ -66,6 +66,27 @@ public class Feedback {
     )
     private Set<User> approvers = new HashSet<>(); // Multiple approvers
 
+    @ManyToMany
+    @JoinTable(
+            name = "feedback_approved_approvers", // ✅ New table to track approvals
+            joinColumns = @JoinColumn(name = "feedback_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> approvedApprovers = new HashSet<>(); // ✅ Approvers who approved
+
+    public Set<User> getApprovedApprovers() {
+        return approvedApprovers;
+    }
+
+    public void approveBy(User user) {
+        this.approvedApprovers.add(user);
+    }
+
+    // ✅ Check if all assigned approvers have approved
+    public boolean isFullyApproved() {
+        return approvedApprovers.size() >= approvers.size();
+    }
+
     @OneToMany(mappedBy = "feedback", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("changeTimestamp DESC")
     @JsonIgnore

@@ -69,16 +69,18 @@ public class FeedbackController {
     }
 
     @GetMapping("/{id}/history")
-    public ResponseEntity<List<FeedbackHistoryResponseDTO>> getFeedbackHistory(@PathVariable Long id,
-                                                                               @RequestParam(required = false) String changedBy,
-                                                                               @RequestParam(required = false) FeedbackStatus previousStatus,
-                                                                               @RequestParam(required = false) FeedbackStatus newStatus,
-                                                                               @RequestParam(required = false) FeedbackPriority previousPriority,
-                                                                               @RequestParam(required = false) FeedbackPriority newPriority,
-                                                                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
-                                                                               @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
-                                                                               @RequestParam(defaultValue = "changeTimestamp") String sortBy,
-                                                                               @RequestParam(defaultValue = "desc") String sortOrder) {
+    public ResponseEntity<List<FeedbackHistoryResponseDTO>> getFeedbackHistory(
+            @PathVariable Long id,
+            @RequestParam(required = false) String changedBy,
+            @RequestParam(required = false) FeedbackStatus previousStatus,
+            @RequestParam(required = false) FeedbackStatus newStatus,
+            @RequestParam(required = false) FeedbackPriority previousPriority,
+            @RequestParam(required = false) FeedbackPriority newPriority,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime toDate,
+            @RequestParam(defaultValue = "changeTimestamp") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortOrder) {
+
         List<FeedbackHistoryResponseDTO> history = feedbackService.getFeedbackHistory(
                 id, changedBy, previousStatus, newStatus, previousPriority, newPriority, fromDate, toDate, sortBy, sortOrder);
 
@@ -118,8 +120,8 @@ public class FeedbackController {
 
     @PutMapping("/{id}/assign-approvers")
     public ResponseEntity<?> assignApprovers(@PathVariable Long id, @RequestBody List<Long> approverIds) {
-        feedbackService.assignApprovers(id, approverIds);
-        return ResponseEntity.ok("Approvers assigned successfully");
+        Feedback feedback = feedbackService.assignApprovers(id, approverIds);
+        return ResponseEntity.ok(new FeedbackResponseDTO(feedback));
     }
 
     @PostMapping("/{id}/comment")

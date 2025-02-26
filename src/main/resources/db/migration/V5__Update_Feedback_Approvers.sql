@@ -1,14 +1,3 @@
--- Check if the column exists before dropping
-SET @exist = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
-              WHERE TABLE_NAME = 'feedback' 
-              AND COLUMN_NAME = 'approver_id' 
-              AND TABLE_SCHEMA = DATABASE());
-
-SET @query = IF(@exist > 0, 'ALTER TABLE feedback DROP COLUMN approver_id', 'SELECT 1');
-PREPARE stmt FROM @query;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
 -- Create the many-to-many relationship table for approvers
 CREATE TABLE IF NOT EXISTS feedback_approvers (
     feedback_id BIGINT NOT NULL,

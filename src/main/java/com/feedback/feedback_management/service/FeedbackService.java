@@ -133,24 +133,63 @@ public class FeedbackService {
     }
 
     //Approve Feedback
-    public FeedbackResponseDTO approveFeedback(long feedbackId, long approveId) {
+//    public FeedbackResponseDTO approveFeedback(long feedbackId, long approveId) {
+//        Feedback feedback = feedbackRepository.findById(feedbackId)
+//                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+//
+//        User approver = userRepository.findById(approveId)
+//                .orElseThrow(() -> new RuntimeException("Approver user not found"));
+//
+//        if (feedback.getStatus() != FeedbackStatus.PENDING) {
+//            throw new RuntimeException("Feedback is already processed");
+//        }
+//
+//        if (!feedback.getApprovers().contains(approver)) {
+//            throw new RuntimeException("User is not an assigned approver for this feedback.");
+//        }
+//
+//        feedback.getApprovers().add(approver);
+//        feedback.setStatus(FeedbackStatus.APPROVED);
+//        feedback.setApprovalDate(LocalDateTime.now());
+//
+//        // Save feedback update
+//        Feedback savedFeedback = feedbackRepository.save(feedback);
+//
+//        // Log approval in history
+//        FeedbackHistory history = new FeedbackHistory();
+//        history.setFeedback(feedback);
+//        history.setChangedBy(approver);
+//        history.setPreviousStatus(FeedbackStatus.PENDING);
+//        history.setNewStatus(FeedbackStatus.APPROVED);
+//        feedbackHistoryRepository.save(history);
+//
+//        return new FeedbackResponseDTO(savedFeedback);
+//    }
+
+    // Approve Feedback (Updated)
+    public FeedbackResponseDTO approveFeedback(long feedbackId, long approverId) {
         Feedback feedback = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new RuntimeException("Feedback not found"));
 
-        User approver = userRepository.findById(approveId)
+        User approver = userRepository.findById(approverId)
                 .orElseThrow(() -> new RuntimeException("Approver user not found"));
 
-        if (feedback.getStatus() != FeedbackStatus.PENDING) {
-            throw new RuntimeException("Feedback is already processed");
+        if (feedback.getStatus() != FeedbackStatus.AWAITING_APPROVAL) {
+            throw new RuntimeException("Feedback is already processed or not in approval stage.");
         }
 
         if (!feedback.getApprovers().contains(approver)) {
             throw new RuntimeException("User is not an assigned approver for this feedback.");
         }
 
-        feedback.getApprovers().add(approver);
-        feedback.setStatus(FeedbackStatus.APPROVED);
-        feedback.setApprovalDate(LocalDateTime.now());
+        // Track who has approved
+        feedback.approveBy(approver);
+
+        // Check if all approvers have approved
+        if (feedback.isFullyApproved()) {
+            feedback.setStatus(FeedbackStatus.APPROVED);
+            feedback.setApprovalDate(LocalDateTime.now());
+        }
 
         // Save feedback update
         Feedback savedFeedback = feedbackRepository.save(feedback);
@@ -159,40 +198,71 @@ public class FeedbackService {
         FeedbackHistory history = new FeedbackHistory();
         history.setFeedback(feedback);
         history.setChangedBy(approver);
-        history.setPreviousStatus(FeedbackStatus.PENDING);
-        history.setNewStatus(FeedbackStatus.APPROVED);
+        history.setPreviousStatus(FeedbackStatus.AWAITING_APPROVAL);
+        history.setNewStatus(savedFeedback.getStatus()); // Could be `APPROVED` or still `AWAITING_APPROVAL`
         feedbackHistoryRepository.save(history);
 
         return new FeedbackResponseDTO(savedFeedback);
     }
 
     //Reject Feedback
+//    public FeedbackResponseDTO rejectFeedback(long feedbackId, long approverId) {
+//        Feedback feedback = feedbackRepository.findById(feedbackId)
+//                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+//
+//        if (feedback.getStatus() != FeedbackStatus.PENDING) {
+//            throw new RuntimeException("Feedback is already processed");
+//        }
+//
+//        User approver = userRepository.findById(approverId)
+//                .orElseThrow(() -> new RuntimeException("Approver user not found"));
+//
+//        if (feedback.getApprovers().contains(approver)) {
+//            throw new RuntimeException("You have already reviewed this feedback.");
+//        }
+//
+//        feedback.getApprovers().add(approver);
+//        feedback.setStatus(FeedbackStatus.REJECTED);
+//        feedback.setApprovalDate(LocalDateTime.now());
+//        //update feedback
+//        Feedback savedFeedback = feedbackRepository.save(feedback);
+//
+//        // Log rejection in history
+//        FeedbackHistory history = new FeedbackHistory();
+//        history.setFeedback(feedback);
+//        history.setChangedBy(approver);
+//        history.setPreviousStatus(FeedbackStatus.PENDING);
+//        history.setNewStatus(FeedbackStatus.REJECTED);
+//        feedbackHistoryRepository.save(history);
+//
+//        return new FeedbackResponseDTO(savedFeedback);
+//    }
+
+    // Reject Feedback (Updated)
     public FeedbackResponseDTO rejectFeedback(long feedbackId, long approverId) {
         Feedback feedback = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new RuntimeException("Feedback not found"));
 
-        if (feedback.getStatus() != FeedbackStatus.PENDING) {
-            throw new RuntimeException("Feedback is already processed");
+        if (feedback.getStatus() != FeedbackStatus.AWAITING_APPROVAL) {
+            throw new RuntimeException("Feedback is already processed.");
         }
 
         User approver = userRepository.findById(approverId)
                 .orElseThrow(() -> new RuntimeException("Approver user not found"));
 
-        if (feedback.getApprovers().contains(approver)) {
-            throw new RuntimeException("You have already reviewed this feedback.");
+        if (!feedback.getApprovers().contains(approver)) {
+            throw new RuntimeException("User is not an assigned approver for this feedback.");
         }
 
-        feedback.getApprovers().add(approver);
         feedback.setStatus(FeedbackStatus.REJECTED);
         feedback.setApprovalDate(LocalDateTime.now());
-        //update feedback
         Feedback savedFeedback = feedbackRepository.save(feedback);
 
         // Log rejection in history
         FeedbackHistory history = new FeedbackHistory();
         history.setFeedback(feedback);
         history.setChangedBy(approver);
-        history.setPreviousStatus(FeedbackStatus.PENDING);
+        history.setPreviousStatus(FeedbackStatus.AWAITING_APPROVAL);
         history.setNewStatus(FeedbackStatus.REJECTED);
         feedbackHistoryRepository.save(history);
 
@@ -206,14 +276,21 @@ public class FeedbackService {
         feedbackRepository.deleteById(feedbackId);
     }
 
-    //Assign Approvers
-    public void assignApprovers(long feedbackId, List<Long> approverIds) {
+    // Assign Approvers
+    public Feedback assignApprovers(long feedbackId, List<Long> approverIds) {
         Feedback feedback = feedbackRepository.findById(feedbackId)
                 .orElseThrow(() -> new RuntimeException("Feedback not found"));
 
+        if (feedback.getStatus() != FeedbackStatus.PENDING) {
+            throw new RuntimeException("Cannot assign approvers. Feedback is already processed.");
+        }
+
         Set<User> approvers = new HashSet<>(userRepository.findAllById(approverIds));
         feedback.setApprovers(approvers);
+        feedback.setStatus(FeedbackStatus.AWAITING_APPROVAL); // ✅ Update status to Awaiting Approval
         feedbackRepository.save(feedback);
+
+        return feedback;
     }
 
     @Transactional

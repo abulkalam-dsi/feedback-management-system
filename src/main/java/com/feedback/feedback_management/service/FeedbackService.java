@@ -81,8 +81,20 @@ public class FeedbackService {
         return new FeedbackResponseDTO(savedFeedback);
     }
 
-    public List<Feedback> getAllFeedback() {
-        return feedbackRepository.findAll();
+    public List<FeedbackResponseDTO> getAllFeedbacks(Long userId, String userRole) {
+        List<Feedback> feedbackList;
+
+        if (userRole.equals("ADMIN")) {
+            // ✅ Admins can see ALL feedback
+            feedbackList = feedbackRepository.findAll();
+        } else {
+            // ✅ Users can ONLY see feedback they created OR where they are an approver
+            feedbackList = feedbackRepository.findByCreatedBy_IdOrApprovers_Id(userId, userId);
+        }
+
+        return feedbackList.stream()
+                .map(feedback -> new FeedbackResponseDTO(feedback, commentRepository.findByFeedbackId(feedback.getId())))
+                .collect(Collectors.toList());
     }
 
     public Optional<Feedback> getFeedbackById(Long id) {

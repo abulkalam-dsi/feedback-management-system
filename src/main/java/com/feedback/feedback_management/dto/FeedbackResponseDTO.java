@@ -55,7 +55,7 @@ public class FeedbackResponseDTO {
                 .map(user -> new ApproverDTO(user.getId(), user.getName()))
                 .collect(Collectors.toList());
         this.comments = commentList != null ? commentList.stream()
-                .map(comment -> new CommentDTO(comment.getUser().getName(), comment.getText(), comment.getCreatedAt()))
+                .map(comment -> new CommentDTO(comment.getUser(), comment.getText(), comment.getCreatedAt()))
                 .collect(Collectors.toList()) : new ArrayList<>();
 
         // ✅ Keep only status/priority changes in history

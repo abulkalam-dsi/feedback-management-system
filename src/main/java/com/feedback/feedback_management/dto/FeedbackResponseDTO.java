@@ -1,5 +1,6 @@
 package com.feedback.feedback_management.dto;
 
+import com.feedback.feedback_management.entity.Comment;
 import com.feedback.feedback_management.entity.Feedback;
 import com.feedback.feedback_management.entity.User;
 import com.feedback.feedback_management.enums.FeedbackCategory;
@@ -9,6 +10,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,12 +29,17 @@ public class FeedbackResponseDTO {
     private String assignedTo;
     private List<ApproverDTO> approvers;
     private List<ApproverDTO> approvedApprovers;
-    private List<Map<String, Object>> comments;
+    private List<CommentDTO> comments = new ArrayList<>();
+    private List<Map<String, Object>> feedbackHistory;
     private LocalDateTime approvalDate;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     public FeedbackResponseDTO(Feedback feedback) {
+        this(feedback, new ArrayList<>()); // Calls the main constructor with an empty list
+    }
+
+    public FeedbackResponseDTO(Feedback feedback, List<Comment> commentList) {
         this.id = feedback.getId();
         this.title = feedback.getTitle();
         this.description = feedback.getDescription();
@@ -47,14 +54,21 @@ public class FeedbackResponseDTO {
         this.approvedApprovers = feedback.getApprovedApprovers().stream() // ✅ Fetch approved approvers
                 .map(user -> new ApproverDTO(user.getId(), user.getName()))
                 .collect(Collectors.toList());
-        this.comments = feedback.getFeedbackHistory().stream()
-                .filter(h -> h.getComment() != null)
+        this.comments = commentList != null ? commentList.stream()
+                .map(comment -> new CommentDTO(comment.getUser().getName(), comment.getText(), comment.getCreatedAt()))
+                .collect(Collectors.toList()) : new ArrayList<>();
+
+        // ✅ Keep only status/priority changes in history
+        this.feedbackHistory = feedback.getFeedbackHistory().stream()
                 .map(h -> {
-                    Map<String, Object> commentData = new HashMap<>();
-                    commentData.put("comment", h.getComment());
-                    commentData.put("changedBy", h.getChangedBy().getName());
-                    commentData.put("changeTimestamp", h.getChangeTimestamp()); // ✅ Include timestamp
-                    return commentData;
+                    Map<String, Object> historyData = new HashMap<>();
+                    historyData.put("changedBy", h.getChangedBy().getName());
+                    historyData.put("previousStatus", h.getPreviousStatus());
+                    historyData.put("newStatus", h.getNewStatus());
+                    historyData.put("previousPriority", h.getPreviousPriority());
+                    historyData.put("newPriority", h.getNewPriority());
+                    historyData.put("changeTimestamp", h.getChangeTimestamp());
+                    return historyData;
                 })
                 .collect(Collectors.toList());
         this.approvalDate = feedback.getApprovalDate();

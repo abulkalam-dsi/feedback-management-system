@@ -9,11 +9,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Table(name = "feedback_comments")
-public class Comment {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+public class Comment extends BaseEntity {
 
     @ManyToOne
     @JoinColumn(name = "feedback_id", nullable = false)

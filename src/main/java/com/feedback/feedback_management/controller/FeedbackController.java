@@ -10,6 +10,7 @@ import com.feedback.feedback_management.entity.User;
 import com.feedback.feedback_management.enums.*;
 import com.feedback.feedback_management.service.FeedbackService;
 import com.feedback.feedback_management.util.JwtUtil;
+import com.feedback.feedback_management.util.ServiceUtils;
 import io.jsonwebtoken.Claims;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -39,26 +40,21 @@ public class FeedbackController {
     @PreAuthorize("hasAnyRole('USER', 'APPROVER', 'ADMIN')")
     @PostMapping("/register")
     public ResponseEntity<FeedbackResponseDTO> submitFeedback(@RequestBody FeedbackRequestDTO feedbackRequestDTO) {
-        try {
-            FeedbackResponseDTO responseDTO = feedbackService.submitFeedback(feedbackRequestDTO);
-            return ResponseEntity.ok().body(responseDTO);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        }
+        FeedbackResponseDTO responseDTO = feedbackService.submitFeedback(feedbackRequestDTO);
+        return ResponseEntity.ok().body(responseDTO);
     }
 
     @GetMapping
     public ResponseEntity<List<FeedbackResponseDTO>> getAllFeedbacks(@RequestHeader("Authorization") String token) {
-        try {
-            Claims claims = jwtUtil.parseToken(token.replace("Bearer ", "")); // ✅ Extract user info from JWT
-            Long userId = Long.parseLong(claims.get("id").toString());
-            String userRole = claims.get("role").toString();
-
-            List<FeedbackResponseDTO> feedbacks = feedbackService.getAllFeedbacks(userId, userRole);
-            return ResponseEntity.ok(feedbacks);
-        } catch (Exception e) {
+        if (token == null || !token.startsWith("Bearer ")) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
+        Claims claims = ServiceUtils.extractClaimsFromToken(token, jwtUtil);
+        Long userId = ServiceUtils.extractUserId(claims);
+        String userRole = ServiceUtils.extractUserRole(claims);
+
+        List<FeedbackResponseDTO> feedbacks = feedbackService.getAllFeedbacks(userId, userRole);
+        return ResponseEntity.ok(feedbacks);
     }
 
     @GetMapping("/{id}")
@@ -70,12 +66,8 @@ public class FeedbackController {
 
     @PutMapping("/{id}/update")
     public ResponseEntity<?> updateFeedback(@PathVariable long id, @RequestBody Feedback updatedFeedback, @RequestParam Long changedById) {
-        try {
-            Feedback savedFeedback = feedbackService.updateFeedback(id, updatedFeedback, changedById);
-            return ResponseEntity.ok(savedFeedback);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        }
+        Feedback savedFeedback = feedbackService.updateFeedback(id, updatedFeedback, changedById);
+        return ResponseEntity.ok(savedFeedback);
     }
 
     @GetMapping("/{id}/history")
@@ -101,24 +93,16 @@ public class FeedbackController {
     //Approve feedback
     @PutMapping("/{id}/approve")
     public ResponseEntity<?> approveFeedabck(@PathVariable long id, @RequestParam long approverId) {
-        try {
-            FeedbackResponseDTO feedbackResponseDTO = feedbackService.approveFeedback(id, approverId);
-            return ResponseEntity.ok(feedbackResponseDTO);
-        } catch (RuntimeException e) {
-            return  ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        }
+        FeedbackResponseDTO feedbackResponseDTO = feedbackService.approveFeedback(id, approverId);
+        return ResponseEntity.ok(feedbackResponseDTO);
     }
 
     @PreAuthorize("hasRole('APPROVER') or hasRole('ADMIN')")
     //Reject feedback
     @PutMapping("/{id}/reject")
     public ResponseEntity<?> rejectFeedback(@PathVariable long id, @RequestParam long approverId) {
-        try {
-            FeedbackResponseDTO feedbackResponseDTO = feedbackService.rejectFeedback(id, approverId);
-            return ResponseEntity.ok(feedbackResponseDTO);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        }
+        FeedbackResponseDTO feedbackResponseDTO = feedbackService.rejectFeedback(id, approverId);
+        return ResponseEntity.ok(feedbackResponseDTO);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -160,7 +144,7 @@ public class FeedbackController {
     }
 
     @GetMapping("/feedbackResponseById/{id}")
-    public ResponseEntity<FeedbackResponseDTO> getFeedbackResponseById(@PathVariable long id) {
+    public ResponseEntity<FeedbackResponseDTO> getFeedbackResponseById(@PathVariable Integer id) {
         return feedbackService.getFeedbackResponseById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

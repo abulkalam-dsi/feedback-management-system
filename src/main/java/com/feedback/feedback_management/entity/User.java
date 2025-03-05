@@ -13,12 +13,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "users")
-public class User {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
-
+public class User extends BaseEntity {
+    
     @Column(nullable = false, unique = true)
     private String email;
 

@@ -3,6 +3,8 @@ package com.feedback.feedback_management.service;
 import com.feedback.feedback_management.dto.DashboardStatsDTO;
 import com.feedback.feedback_management.enums.FeedbackStatus;
 import com.feedback.feedback_management.repository.FeedbackRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -14,6 +16,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class DashboardService {
+    private static final Logger logger = LoggerFactory.getLogger(DashboardService.class);
     private final FeedbackRepository feedbackRepository;
 
     public DashboardService(FeedbackRepository feedbackRepository) {
@@ -21,21 +24,28 @@ public class DashboardService {
     }
 
     public DashboardStatsDTO getDashboardStats() {
+        logger.info("Fetching dashboard statistics...");
+
         // Count feedback statuses
         long totalFeedbacks = feedbackRepository.count();
         long approvedFeedbacks = feedbackRepository.countByStatus(FeedbackStatus.APPROVED);
         long rejectedFeedbacks = feedbackRepository.countByStatus(FeedbackStatus.REJECTED);
         long pendingFeedbacks = feedbackRepository.countByStatus(FeedbackStatus.PENDING);
 
+        logger.debug("Total Feedbacks: {}, Approved: {}, Rejected: {}, Pending: {}",
+                totalFeedbacks, approvedFeedbacks, rejectedFeedbacks, pendingFeedbacks);
+
         List<Map<String, Object>> feedbackByCategory = feedbackRepository.countByCategory()
                 .stream()
                 .map(row -> Map.of("category", row[0], "count", row[1]))
                 .collect(Collectors.toList());
+        logger.debug("Feedback count by category: {}", feedbackByCategory);
 
         List<Map<String, Object>> feedbackByPriority = feedbackRepository.countByPriority()
                 .stream()
                 .map(row -> Map.of("priority", row[0], "count", row[1]))
                 .collect(Collectors.toList());
+        logger.debug("Feedback count by priority: {}", feedbackByPriority);
 
         LocalDateTime startDate = LocalDate.now().minusDays(30).atStartOfDay();
         LocalDateTime endDate = LocalDate.now().atTime(LocalTime.MAX);
@@ -44,6 +54,9 @@ public class DashboardService {
                 .stream()
                 .map(row -> Map.of("date", row[0], "count", row[1]))
                 .collect(Collectors.toList());
+        logger.debug("Feedback trends in the last 30 days: {}", feedbackTrends);
+
+        logger.info("Dashboard statistics successfully retrieved.");
 
         // Return data
         return new DashboardStatsDTO(totalFeedbacks, approvedFeedbacks, rejectedFeedbacks, pendingFeedbacks,

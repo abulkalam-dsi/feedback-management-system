@@ -8,6 +8,7 @@ import com.feedback.feedback_management.entity.FeedbackHistory;
 import com.feedback.feedback_management.entity.User;
 import com.feedback.feedback_management.enums.FeedbackPriority;
 import com.feedback.feedback_management.enums.FeedbackStatus;
+import com.feedback.feedback_management.exception.*;
 import com.feedback.feedback_management.repository.CommentRepository;
 import com.feedback.feedback_management.repository.FeedbackHistoryRepository;
 import com.feedback.feedback_management.repository.FeedbackRepository;
@@ -18,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -56,11 +58,11 @@ public class FeedbackService {
 
     public FeedbackResponseDTO submitFeedback(FeedbackRequestDTO feedbackRequestDTO) {
         if (feedbackRequestDTO.getCreatedBy() == null) {
-            throw new RuntimeException("CreatedBy ID is null");
+            throw new CustomException("Created Id is null", HttpStatus.BAD_REQUEST);
         }
 
         User createdByUser = userRepository.findById(feedbackRequestDTO.getCreatedBy())
-                .orElseThrow(() -> new RuntimeException("CreatedBy user not found"));
+                .orElseThrow(() -> new CustomException("CreatedBy user not found", HttpStatus.NOT_FOUND));
 
         Feedback feedback = new Feedback();
         feedback.setTitle(feedbackRequestDTO.getTitle());
@@ -73,7 +75,7 @@ public class FeedbackService {
         // If assignedToId is provided, validate the user
         if (feedbackRequestDTO.getAssignedTo() != null) {
             User assignedToUser = userRepository.findById(feedbackRequestDTO.getAssignedTo())
-                    .orElseThrow(() -> new RuntimeException("AssignedTo user not found"));
+                    .orElseThrow(() -> new CustomException("AssignedTo user not found", HttpStatus.NOT_FOUND));
             feedback.setAssignedTo(assignedToUser);
         }
 
@@ -107,7 +109,7 @@ public class FeedbackService {
 
     public Feedback updateFeedback(Long id, Feedback updatedFeedback, Long changedById) {
         User changeBy = userRepository.findById(changedById)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
 
         return feedbackRepository.findById(id).map(feedback -> {
             //Save history before updating
@@ -127,7 +129,7 @@ public class FeedbackService {
             feedback.setCategory(updatedFeedback.getCategory());
             feedback.setPriority(updatedFeedback.getPriority());
             return feedbackRepository.save(feedback);
-        }).orElseThrow(() -> new RuntimeException("Feedback not found"));
+        }).orElseThrow(() -> new CustomException("Feedback not found", HttpStatus.NOT_FOUND));
     }
 
     public List<FeedbackHistoryResponseDTO> getFeedbackHistory(Long feedbackId, String changedBy,
@@ -149,17 +151,17 @@ public class FeedbackService {
     // Approve Feedback (Updated)
     public FeedbackResponseDTO approveFeedback(long feedbackId, long approverId) {
         Feedback feedback = feedbackRepository.findById(feedbackId)
-                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+                .orElseThrow(() -> new CustomException("Feedback not found", HttpStatus.NOT_FOUND));
 
         User approver = userRepository.findById(approverId)
-                .orElseThrow(() -> new RuntimeException("Approver user not found"));
+                .orElseThrow(() -> new CustomException("Approver user not found", HttpStatus.NOT_FOUND));
 
         if (feedback.getStatus() != FeedbackStatus.AWAITING_APPROVAL) {
-            throw new RuntimeException("Feedback is already processed or not in approval stage.");
+            throw new CustomException("Feedback is already processed or not in approval stage.", HttpStatus.BAD_REQUEST);
         }
 
         if (!feedback.getApprovers().contains(approver)) {
-            throw new RuntimeException("User is not an assigned approver for this feedback.");
+            throw new CustomException("User is not an assigned approver for this feedback.", HttpStatus.FORBIDDEN);
         }
 
         // Track who has approved
@@ -190,17 +192,17 @@ public class FeedbackService {
     // Reject Feedback (Updated)
     public FeedbackResponseDTO rejectFeedback(long feedbackId, long approverId) {
         Feedback feedback = feedbackRepository.findById(feedbackId)
-                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+                .orElseThrow(() -> new CustomException("Feedback not found", HttpStatus.NOT_FOUND));
 
         if (feedback.getStatus() != FeedbackStatus.AWAITING_APPROVAL) {
-            throw new RuntimeException("Feedback is already processed.");
+            throw new CustomException("Feedback is already processed.", HttpStatus.CONFLICT);
         }
 
         User approver = userRepository.findById(approverId)
-                .orElseThrow(() -> new RuntimeException("Approver user not found"));
+                .orElseThrow(() -> new CustomException("Approver user not found", HttpStatus.NOT_FOUND));
 
         if (!feedback.getApprovers().contains(approver)) {
-            throw new RuntimeException("User is not an assigned approver for this feedback.");
+            throw new CustomException("User is not an assigned approver for this feedback.", HttpStatus.FORBIDDEN);
         }
 
         feedback.setStatus(FeedbackStatus.REJECTED);
@@ -222,7 +224,7 @@ public class FeedbackService {
 
     public void deleteFeedback(long feedbackId) {
         Feedback feedback = feedbackRepository.findById(feedbackId)
-                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+                .orElseThrow(() -> new CustomException("Feedback not found", HttpStatus.NOT_FOUND));
 
         feedbackRepository.deleteById(feedbackId);
     }
@@ -231,10 +233,10 @@ public class FeedbackService {
     @Transactional
     public Feedback assignApprovers(long feedbackId, List<Long> approverIds) {
         Feedback feedback = feedbackRepository.findById(feedbackId)
-                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+                .orElseThrow(() -> new CustomException("Feedback not found", HttpStatus.NOT_FOUND));
 
         if (feedback.getStatus() != FeedbackStatus.PENDING) {
-            throw new RuntimeException("Cannot assign approvers. Feedback is already processed.");
+            throw new CustomException("Cannot assign approvers. Feedback is already processed.", HttpStatus.CONFLICT);
         }
 
         Set<User> approvers = new HashSet<>(userRepository.findAllById(approverIds));
@@ -265,13 +267,13 @@ public class FeedbackService {
     @Transactional
     public Comment addComment(long feedbackId, long userId, String comment) {
         Feedback feedback = feedbackRepository.findById(feedbackId)
-                .orElseThrow(() -> new RuntimeException("Feedback not found"));
+                .orElseThrow(() -> new CustomException("Feedback not found", HttpStatus.NOT_FOUND));
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
 
         if (comment == null || comment.trim().isEmpty()) {
-            throw new RuntimeException("Comment cannot be empty");
+            throw new CustomException("Comment cannot be empty", HttpStatus.BAD_REQUEST);
         }
 
         // ✅ Publish event AFTER transaction commits
@@ -293,7 +295,7 @@ public class FeedbackService {
     private User getCurrentUser() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
     }
 
 }

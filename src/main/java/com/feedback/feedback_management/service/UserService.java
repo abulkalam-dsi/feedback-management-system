@@ -4,9 +4,10 @@ import com.feedback.feedback_management.dto.UserRequestDTO;
 import com.feedback.feedback_management.dto.UserResponseDTO;
 import com.feedback.feedback_management.entity.User;
 import com.feedback.feedback_management.enums.UserRole;
+import com.feedback.feedback_management.exception.CustomException;
 import com.feedback.feedback_management.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -27,7 +28,7 @@ public class UserService {
         Optional<User> existingUser = userRepository.findByEmail(userRequestDTO.getEmail());
 
         if (existingUser.isPresent()) {
-            throw new RuntimeException("Email already in use.");
+            throw new CustomException("Email already exists.", HttpStatus.CONFLICT);
         }
 
         User user = new User();
@@ -51,14 +52,14 @@ public class UserService {
 
     public UserResponseDTO getCurrentUser(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
 
         return new UserResponseDTO(user);
     }
 
     public void updateUserRole(Long id, String newRole) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
         user.setRole(UserRole.valueOf(newRole.toUpperCase()));
         userRepository.save(user);
     }
